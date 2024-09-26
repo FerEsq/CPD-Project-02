@@ -5,9 +5,7 @@ RUN apt-get update && apt-get install -y \
     make \
     openmpi-bin \
     libopenmpi-dev \
-    libtirpc-dev \
-    libgcrypt20-dev \
-    libbsd-dev \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
