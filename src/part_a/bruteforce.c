@@ -100,6 +100,8 @@ int main(int argc, char *argv[]) {
       srand(time(NULL));
       key = rand() % upper;
 
+      //printf("Key: %li\n", key);
+
       // Copy the message to the cipher
       memcpy(cipher, plaintext, sizeof(plaintext));
       encrypt(key, cipher, sizeof(plaintext));
@@ -118,36 +120,31 @@ int main(int argc, char *argv[]) {
   }
 
   long found = 0;
-  int found_flag = 0;
 
   // Receive the found key from any node
   MPI_Irecv(&found, 1, MPI_LONG, MPI_ANY_SOURCE, 0, comm, &req);
 
   // Try the keys in the range
-  for (long i = mylower; i <= myupper && !found_flag; ++i) {
+  for (long i = mylower; i <= myupper && (found == 0); ++i) {
       if (tryKey(i, cipher, ciphlen)) {
+          if (found != 0) {
+              break;
+          }
+          printf("Process %d found the key: %li\n", id, i);
           found = i;
-          found_flag = 1;
           for (int node = 0; node < N; node++) {
-              if (node != id) {
-                // Send the found key to all nodes
-                MPI_Send(&found, 1, MPI_LONG, node, 0, comm);
-              }
+              MPI_Send(&found, 1, MPI_LONG, node, 0, comm);
           }
           break;
       }
   }
 
-  if (!found_flag) {
-    // Wait for the found key
-      MPI_Wait(&req, &st);
-  }
-
   if (id == 0) {
+    MPI_Wait(&req, &st);
     // decrypt the message with the found key
-      decrypt(found, cipher, ciphlen);
-      // Print the found key and the decrypted message
-      printf("%li: \"%s\"\n", found, cipher);
+    decrypt(found, cipher, ciphlen);
+    // Print the found key and the decrypted message
+    printf("%li: \"%s\"\n", found, cipher);
   }
 
   MPI_Finalize();
