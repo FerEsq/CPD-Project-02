@@ -21,7 +21,7 @@
  * @param len The length of the message
  * @return void
  */
-void decrypt(long key, unsigned char *ciph, int len) {
+void decrypt(long key, unsigned char *ciph) {
   DES_cblock keyBlock;
   DES_key_schedule schedule;
 
@@ -41,7 +41,7 @@ void decrypt(long key, unsigned char *ciph, int len) {
  * @param len The length of the message
  * @return void
  */
-void encrypt(long key, unsigned char *ciph, int len) {
+void encrypt(long key, unsigned char *ciph) {
   DES_cblock keyBlock;
   DES_key_schedule schedule;
 
@@ -67,7 +67,7 @@ char search[] = "test";
 int tryKey(long key, unsigned char *ciph, int len) {
   unsigned char temp[len + 1];
   memcpy(temp, ciph, len);
-  decrypt(key, temp, len);
+  decrypt(key, temp);
   temp[len] = '\0'; 
   return strstr((char *)temp, search) != NULL;
 }
@@ -100,11 +100,11 @@ int main(int argc, char *argv[]) {
       srand(time(NULL));
       key = rand() % upper;
 
-      //printf("Key: %li\n", key);
+      printf("Key: %li\n", key);
 
       // Copy the message to the cipher
       memcpy(cipher, plaintext, sizeof(plaintext));
-      encrypt(key, cipher, sizeof(plaintext));
+      encrypt(key, cipher);
   }
 
   // Broadcast the cypher to all nodes
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
   if (id == 0) {
     MPI_Wait(&req, &st);
     // decrypt the message with the found key
-    decrypt(found, cipher, ciphlen);
+    decrypt(found, cipher);
     // Print the found key and the decrypted message
     printf("%li: \"%s\"\n", found, cipher);
   }
