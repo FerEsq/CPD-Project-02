@@ -25,3 +25,18 @@ mpicc -o out.o bruteforce.c -lssl -lcrypto
 ```
 mpirun --allow-run-as-root -np 4 ./out.o
 ```
+
+## Parte B
+### Paralelo
+```
+mpic++ -o out.o bruteforce_par.cpp -lssl -lcrypto
+```
+
+```
+mpirun --allow-run-as-root -np <num_procesos> ./out.o <clave> <nombre_archivo_txt>
+```
+
+#### Ejemplo:
+```
+mpirun --allow-run-as-root -np 4 ./out.o 42 message.txt
+```
