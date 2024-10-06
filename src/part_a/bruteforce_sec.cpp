@@ -71,6 +71,10 @@ int tryKey(long key, unsigned char *ciph, int len) {
 }
 
 int main(int argc, char *argv[]) {
+    // Measure the time for the brute-force search
+    clock_t start_time, end_time;
+    double total_time;
+
     // The upper bound for the DES keys
     long upper = (1L << 20);
 
@@ -104,6 +108,11 @@ int main(int argc, char *argv[]) {
     } else {
         printf("Key not found\n");
     }
+
+    end_time = clock(); // End time
+    total_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC; // Calculate the time taken
+
+    printf("Decryption completed in %.6f seconds\n", total_time);
 
     return 0;
 }
