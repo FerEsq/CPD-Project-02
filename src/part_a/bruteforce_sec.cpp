@@ -20,17 +20,19 @@
  * @param ciph The message to decrypt.
  * @param len The length of the message.
  */
-void decrypt(long key, unsigned char *ciph, int len) {
+void decrypt(long key, unsigned char* ciph, int len)
+{
     DES_cblock keyBlock;
     DES_key_schedule schedule;
 
     memcpy(&keyBlock, &key, sizeof(keyBlock));
     DES_set_odd_parity(&keyBlock);
-    if (DES_set_key_checked(&keyBlock, &schedule) != 0) {
+    if (DES_set_key_checked(&keyBlock, &schedule) != 0)
+    {
         return;
     }
 
-    DES_ecb_encrypt((DES_cblock *)ciph, (DES_cblock *)ciph, &schedule, DES_DECRYPT);
+    DES_ecb_encrypt((DES_cblock*)ciph, (DES_cblock*)ciph, &schedule, DES_DECRYPT);
 }
 
 /**
@@ -39,17 +41,19 @@ void decrypt(long key, unsigned char *ciph, int len) {
  * @param ciph The message to encrypt.
  * @param len The length of the message.
  */
-void encrypt(long key, unsigned char *ciph, int len) {
+void encrypt(long key, unsigned char* ciph, int len)
+{
     DES_cblock keyBlock;
     DES_key_schedule schedule;
 
     memcpy(&keyBlock, &key, sizeof(keyBlock));
     DES_set_odd_parity(&keyBlock);
-    if (DES_set_key_checked(&keyBlock, &schedule) != 0) {
+    if (DES_set_key_checked(&keyBlock, &schedule) != 0)
+    {
         return;
     }
 
-    DES_ecb_encrypt((DES_cblock *)ciph, (DES_cblock *)ciph, &schedule, DES_ENCRYPT);
+    DES_ecb_encrypt((DES_cblock*)ciph, (DES_cblock*)ciph, &schedule, DES_ENCRYPT);
 }
 
 // The message to search for
@@ -62,15 +66,17 @@ char search[] = "test";
  * @param len The length of the message.
  * @return 1 if the message contains the search string, 0 otherwise.
  */
-int tryKey(long key, unsigned char *ciph, int len) {
+int tryKey(long key, unsigned char* ciph, int len)
+{
     unsigned char temp[len + 1];
     memcpy(temp, ciph, len);
     decrypt(key, temp, len);
-    temp[len] = '\0'; 
-    return strstr((char *)temp, search) != NULL;
+    temp[len] = '\0';
+    return strstr((char*)temp, search) != NULL;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[])
+{
     // Measure the time for the brute-force search
     clock_t start_time, end_time;
     double total_time;
@@ -93,19 +99,24 @@ int main(int argc, char *argv[]) {
 
     // Try all keys from 0 to upper
     long found = -1;
-    for (long i = 0; i <= upper; ++i) {
-        if (tryKey(i, cipher, sizeof(plaintext))) {
+    for (long i = 0; i <= upper; ++i)
+    {
+        if (tryKey(i, cipher, sizeof(plaintext)))
+        {
             found = i;
             break;
         }
     }
 
-    if (found != -1) {
+    if (found != -1)
+    {
         // Decrypt the message with the found key
         decrypt(found, cipher, sizeof(plaintext));
         // Print the found key and the decrypted message
         printf("%li: \"%s\"\n", found, cipher);
-    } else {
+    }
+    else
+    {
         printf("Key not found\n");
     }
 

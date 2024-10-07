@@ -22,17 +22,19 @@
  * @param key The key to use for decryption.
  * @param ciph The block to decrypt.
  */
-void decryptBlock(long key, unsigned char *ciph) {
+void decryptBlock(long key, unsigned char* ciph)
+{
     DES_cblock keyBlock;
     DES_key_schedule schedule;
 
     memcpy(&keyBlock, &key, sizeof(keyBlock));
     DES_set_odd_parity(&keyBlock);
-    if (DES_set_key_checked(&keyBlock, &schedule) != 0) {
+    if (DES_set_key_checked(&keyBlock, &schedule) != 0)
+    {
         return;
     }
 
-    DES_ecb_encrypt((DES_cblock *)ciph, (DES_cblock *)ciph, &schedule, DES_DECRYPT);
+    DES_ecb_encrypt((DES_cblock*)ciph, (DES_cblock*)ciph, &schedule, DES_DECRYPT);
 }
 
 /**
@@ -40,17 +42,19 @@ void decryptBlock(long key, unsigned char *ciph) {
  * @param key The key to use for encryption.
  * @param ciph The block to encrypt.
  */
-void encryptBlock(long key, unsigned char *ciph) {
+void encryptBlock(long key, unsigned char* ciph)
+{
     DES_cblock keyBlock;
     DES_key_schedule schedule;
 
     memcpy(&keyBlock, &key, sizeof(keyBlock));
     DES_set_odd_parity(&keyBlock);
-    if (DES_set_key_checked(&keyBlock, &schedule) != 0) {
+    if (DES_set_key_checked(&keyBlock, &schedule) != 0)
+    {
         return;
     }
 
-    DES_ecb_encrypt((DES_cblock *)ciph, (DES_cblock *)ciph, &schedule, DES_ENCRYPT);
+    DES_ecb_encrypt((DES_cblock*)ciph, (DES_cblock*)ciph, &schedule, DES_ENCRYPT);
 }
 
 /**
@@ -59,9 +63,11 @@ void encryptBlock(long key, unsigned char *ciph) {
  * @param buffer A pointer to store the file content.
  * @return The length of the file content.
  */
-int readFile(const char *filename, unsigned char **buffer) {
-    FILE *file = fopen(filename, "rb");
-    if (!file) {
+int readFile(const char* filename, unsigned char** buffer)
+{
+    FILE* file = fopen(filename, "rb");
+    if (!file)
+    {
         printf("Error opening file.\n");
         exit(1);
     }
@@ -70,9 +76,9 @@ int readFile(const char *filename, unsigned char **buffer) {
     long file_size = ftell(file);
     rewind(file);
 
-    *buffer = (unsigned char *)malloc(file_size + 1);
+    *buffer = (unsigned char*)malloc(file_size + 1);
     fread(*buffer, 1, file_size, file);
-    (*buffer)[file_size] = '\0';  // Ensure null-terminated string
+    (*buffer)[file_size] = '\0'; // Ensure null-terminated string
     fclose(file);
 
     return file_size;
@@ -84,8 +90,10 @@ int readFile(const char *filename, unsigned char **buffer) {
  * @param ciph The message to encrypt.
  * @param len The length of the message.
  */
-void encryptMessage(long key, unsigned char *ciph, int len) {
-    for (int i = 0; i < len; i += BLOCK_SIZE) {
+void encryptMessage(long key, unsigned char* ciph, int len)
+{
+    for (int i = 0; i < len; i += BLOCK_SIZE)
+    {
         encryptBlock(key, ciph + i);
     }
 }
@@ -96,8 +104,10 @@ void encryptMessage(long key, unsigned char *ciph, int len) {
  * @param ciph The message to decrypt.
  * @param len The length of the message.
  */
-void decryptMessage(long key, unsigned char *ciph, int len) {
-    for (int i = 0; i < len; i += BLOCK_SIZE) {
+void decryptMessage(long key, unsigned char* ciph, int len)
+{
+    for (int i = 0; i < len; i += BLOCK_SIZE)
+    {
         decryptBlock(key, ciph + i);
     }
 }
@@ -109,15 +119,17 @@ void decryptMessage(long key, unsigned char *ciph, int len) {
  * @param new_len Pointer to store the new length after padding.
  * @return A new message with padding.
  */
-unsigned char *addPadding(unsigned char *message, int len, int *new_len) {
+unsigned char* addPadding(unsigned char* message, int len, int* new_len)
+{
     int padding_needed = BLOCK_SIZE - (len % BLOCK_SIZE);
     *new_len = len + padding_needed;
 
-    unsigned char *padded_message = (unsigned char *)malloc(*new_len);
+    unsigned char* padded_message = (unsigned char*)malloc(*new_len);
     memcpy(padded_message, message, len);
 
     // Add padding (PKCS5/PKCS7 style)
-    for (int i = len; i < *new_len; ++i) {
+    for (int i = len; i < *new_len; ++i)
+    {
         padded_message[i] = padding_needed;
     }
 
@@ -129,7 +141,8 @@ unsigned char *addPadding(unsigned char *message, int len, int *new_len) {
  * @param message The decrypted message with padding.
  * @param len Pointer to the length of the message.
  */
-void removePadding(unsigned char *message, int *len) {
+void removePadding(unsigned char* message, int* len)
+{
     int padding_value = message[*len - 1];
     *len -= padding_value;
 }
@@ -140,22 +153,27 @@ void removePadding(unsigned char *message, int *len) {
  * @param keyword The word to search for.
  * @return 1 if the keyword is found, 0 otherwise.
  */
-int searchKeyword(const char *decrypted, const char *keyword) {
+int searchKeyword(const char* decrypted, const char* keyword)
+{
     return strstr(decrypted, keyword) != NULL;
 }
 
-int main(int argc, char *argv[]) {
-    MPI_Init(&argc, &argv);  // Initialize MPI environment
+int main(int argc, char* argv[])
+{
+    MPI_Init(&argc, &argv); // Initialize MPI environment
 
     int numprocs, rank;
-    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);  // Get number of processes
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);      // Get process rank
+    MPI_Comm_size(MPI_COMM_WORLD, &numprocs); // Get number of processes
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank); // Get process rank
 
     // Definimos la oración fija que se quiere buscar en el texto descifrado
-    const char *keyword = "es una prueba de";
+    const char* keyword = "Esta es una prueba de proyecto 2";
 
-    if (argc != 3) {  // El programa ahora espera solo 2 argumentos: key y file
-        if (rank == 0) {
+    if (argc != 3)
+    {
+        // El programa ahora espera solo 2 argumentos: key y file
+        if (rank == 0)
+        {
             printf("Usage: %s <key> <file>\n", argv[0]);
         }
         MPI_Finalize();
@@ -166,9 +184,10 @@ int main(int argc, char *argv[]) {
     long original_key = atol(argv[1]);
 
     // Read the content of the file only in rank 0
-    unsigned char *plaintext = NULL;
+    unsigned char* plaintext = NULL;
     int len;
-    if (rank == 0) {
+    if (rank == 0)
+    {
         len = readFile(argv[2], &plaintext);
     }
 
@@ -176,8 +195,9 @@ int main(int argc, char *argv[]) {
     MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Allocate space for the plaintext and ciphertext
-    if (rank != 0) {
-        plaintext = (unsigned char *)malloc(len);
+    if (rank != 0)
+    {
+        plaintext = (unsigned char*)malloc(len);
     }
 
     // Broadcast the plaintext from rank 0 to all processes
@@ -185,10 +205,10 @@ int main(int argc, char *argv[]) {
 
     // Add padding to the plaintext
     int padded_len;
-    unsigned char *padded_message = addPadding(plaintext, len, &padded_len);
+    unsigned char* padded_message = addPadding(plaintext, len, &padded_len);
 
     // Allocate space for the ciphertext
-    unsigned char *cipher = (unsigned char *)malloc(padded_len + 1);  // Make space for padding
+    unsigned char* cipher = (unsigned char*)malloc(padded_len + 1); // Make space for padding
 
     // Copy the padded message into the cipher buffer for encryption
     memcpy(cipher, padded_message, padded_len);
@@ -203,22 +223,26 @@ int main(int argc, char *argv[]) {
     end_time = clock();
     encrypt_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
 
-    if (rank == 0) {
-        printf("Encrypted message: ", rank);
-        for (int i = 0; i < padded_len; ++i) {
-            printf("%c", cipher[i]);  // Print as raw characters for encryption
+    if (rank == 0)
+    {
+        printf("Encrypted message:\n\t", rank);
+        for (int i = 0; i < padded_len; ++i)
+        {
+            printf("%c", cipher[i]); // Print as raw characters for encryption
         }
         printf("\nEncryption completed in %.6f seconds\n", encrypt_time);
     }
 
     // Ahora realizaremos el ataque de fuerza bruta para encontrar la clave correcta.
     long found_key = -1;
-    unsigned char *brute_force_attempt = (unsigned char *)malloc(padded_len);
-    
+    unsigned char* brute_force_attempt = (unsigned char*)malloc(padded_len);
+
     // Vamos a probar claves desde 0 hasta un límite arbitrario (puedes ajustar este valor)
-    for (long key_attempt = 0; key_attempt < 1000000; ++key_attempt) {
-        memcpy(brute_force_attempt, cipher, padded_len);  // Copiar el mensaje cifrado para cada intento
-        
+    start_time = clock();
+    for (long key_attempt = 0; key_attempt < 1000000; ++key_attempt)
+    {
+        memcpy(brute_force_attempt, cipher, padded_len); // Copiar el mensaje cifrado para cada intento
+
         // Intentar descifrar con la clave actual
         decryptMessage(key_attempt, brute_force_attempt, padded_len);
 
@@ -227,28 +251,37 @@ int main(int argc, char *argv[]) {
         removePadding(brute_force_attempt, &decrypted_len);
 
         // Verificar si el texto descifrado contiene la palabra clave
-        if (searchKeyword((char *)brute_force_attempt, keyword)) {
+        if (searchKeyword((char*)brute_force_attempt, keyword))
+        {
             found_key = key_attempt;
-            break;  // Detener el ciclo cuando encontremos la clave correcta
+            break; // Detener el ciclo cuando encontremos la clave correcta
         }
     }
-
-    if (rank == 0) {
+    end_time = clock();
+    decrypt_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+    if (rank == 0)
+    {
         // Mostrar el mensaje desencriptado
-        printf("Decrypted message: %.*s\n", rank, padded_len, brute_force_attempt);
+        printf("\n");
+        printf("Decrypted message:%.*d\n", rank, padded_len, brute_force_attempt);
         printf("Decryption completed in %.6f seconds\n", decrypt_time);
 
-        if (found_key != -1) {
-            printf("Correct decryption key found: %ld\n", found_key);
+        if (found_key != -1)
+        {
+            printf("\tCorrect decryption key found: %ld\n", found_key);
 
             // Verificar nuevamente si la palabra clave está en el mensaje descifrado
-            if (searchKeyword((char *)brute_force_attempt, keyword)) {
+            if (searchKeyword((char*)brute_force_attempt, keyword))
+            {
                 printf("Keyword '%s' found in the decrypted message.\n", keyword);
-            } else {
+            }
+            else
+            {
                 printf("Keyword '%s' NOT found in the decrypted message.\n", keyword);
             }
-
-        } else {
+        }
+        else
+        {
             printf("Decryption key not found.\n");
         }
     }
@@ -259,7 +292,7 @@ int main(int argc, char *argv[]) {
     free(cipher);
     free(brute_force_attempt);
 
-    MPI_Finalize();  // Finalize MPI environment
+    MPI_Finalize(); // Finalize MPI environment
 
     return 0;
 }
