@@ -1,3 +1,12 @@
+/**
+* This program encrypts and decrypts a message loaded from a file using DES and an arbitrary key, using MPI for parallel processing.
+ *
+ * Programación Paralela y Distribuida
+ * Andrés Montoya - 21552
+ * Francisco Castillo - 21562
+ * Fernanda Esquivel - 21542
+ */
+
 #include <cstdint>
 #include <openssl/des.h>
 #include <string.h>
@@ -14,7 +23,8 @@
  * @param key The key to use for decryption.
  * @param ciph The block to decrypt.
  */
-void decryptBlock(uint64_t key, unsigned char* ciph) {
+void decryptBlock(uint64_t key, unsigned char* ciph)
+{
     DES_cblock keyBlock;
     DES_key_schedule schedule;
 
@@ -36,7 +46,8 @@ void decryptBlock(uint64_t key, unsigned char* ciph) {
  * @param key The key to use for encryption.
  * @param ciph The block to encrypt.
  */
-void encryptBlock(uint64_t key, unsigned char* ciph) {
+void encryptBlock(uint64_t key, unsigned char* ciph)
+{
     DES_cblock keyBlock;
     DES_key_schedule schedule;
 
@@ -46,9 +57,7 @@ void encryptBlock(uint64_t key, unsigned char* ciph) {
     memcpy(&keyBlock, &key, sizeof(keyBlock));
     DES_set_odd_parity(&keyBlock);
     if (DES_set_key_checked(&keyBlock, &schedule) != 0)
-    {
         return;
-    }
 
     DES_ecb_encrypt((DES_cblock*)ciph, (DES_cblock*)ciph, &schedule, DES_ENCRYPT);
 }
@@ -89,9 +98,7 @@ int readFile(const char* filename, unsigned char** buffer)
 void encryptMessage(uint64_t key, unsigned char* ciph, int len)
 {
     for (int i = 0; i < len; i += BLOCK_SIZE)
-    {
         encryptBlock(key, ciph + i);
-    }
 }
 
 /**
@@ -103,9 +110,7 @@ void encryptMessage(uint64_t key, unsigned char* ciph, int len)
 void decryptMessage(uint64_t key, unsigned char* ciph, int len)
 {
     for (int i = 0; i < len; i += BLOCK_SIZE)
-    {
         decryptBlock(key, ciph + i);
-    }
 }
 
 /**
@@ -169,9 +174,7 @@ int main(int argc, char* argv[])
     {
         // El programa ahora espera solo 2 argumentos: key y file
         if (rank == 0)
-        {
             printf("Usage: %s <key> <file>\n", argv[0]);
-        }
         MPI_Finalize();
         return 1;
     }
@@ -183,18 +186,14 @@ int main(int argc, char* argv[])
     unsigned char* plaintext = NULL;
     int len;
     if (rank == 0)
-    {
         len = readFile(argv[2], &plaintext);
-    }
 
     // Broadcast the length of the message to all processes
     MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Allocate space for the plaintext and ciphertext
     if (rank != 0)
-    {
         plaintext = (unsigned char*)malloc(len);
-    }
 
     // Broadcast the plaintext from rank 0 to all processes
     MPI_Bcast(plaintext, len, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
@@ -223,63 +222,67 @@ int main(int argc, char* argv[])
     {
         printf("Encrypted message:\n\t");
         for (int i = 0; i < padded_len; ++i)
-        {
             printf("%c", cipher[i]); // Print as raw characters for encryption
-        }
         printf("\nEncryption completed in %.6f seconds\n", encrypt_time);
     }
 
-    // Ahora realizaremos el ataque de fuerza bruta para encontrar la clave correcta.
     unsigned char* brute_force_attempt = (unsigned char*)malloc(padded_len);
 
-    // Vamos a probar claves desde 0 hasta un límite de 56 bits
+    // Distribute the key search space among all processes
+    uint64_t key_space_size = (1ULL << 56); // Total 56-bit key space
+    uint64_t keys_per_proc = key_space_size / numprocs; // 4 processes (-np 4)
+    uint64_t start_key = rank * keys_per_proc;
+    uint64_t end_key = (rank + 1) * keys_per_proc;
+
     long found_key = -1;
-    uint64_t current_key = 1;
-    const uint64_t upper_limit = (1ULL << 56); // Full keyspace for 56-bit DES
+    uint64_t current_key = start_key;
 
     start_time = clock();
-    while (found_key == -1 && current_key < upper_limit)
+    while (found_key == -1 && current_key < end_key)
     {
-        // Copiar el mensaje cifrado para cada intento
+        // Copy the encrypted message for each attempt
         memcpy(brute_force_attempt, cipher, padded_len);
 
-        // Intentar descifrar con la clave actual
+        // Attempt decryption with the current key
         decryptMessage(current_key, brute_force_attempt, padded_len);
 
-        // Remover el padding para verificar si el mensaje fue descifrado correctamente
+        // Remove padding to verify if the message was decrypted correctly
         int decrypted_len = padded_len;
         removePadding(brute_force_attempt, &decrypted_len);
 
-        // Verificar si el texto descifrado contiene la palabra clave
+        // Check if the decrypted text contains the keyword
         if (searchKeyword((char*)brute_force_attempt, keyword))
+        {
             found_key = current_key;
+            break;
+        }
 
         current_key++;
     }
+
+    // Communicate results back to rank 0
+    int global_found_key = -1;
+    MPI_Reduce(&found_key, &global_found_key, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
+
     end_time = clock();
     decrypt_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+
     if (rank == 0)
     {
         printf("\nDecryption completed in %.6f seconds\n", decrypt_time);
 
-        if (found_key != -1)
+        if (global_found_key != -1)
         {
-            printf("\tCorrect decryption key found: %ld\n", found_key);
+            printf("\tCorrect decryption key found: %ld\n", global_found_key);
 
-            // Verificar nuevamente si la palabra clave está en el mensaje descifrado
+            // Verify if the keyword is in the decrypted message
             if (searchKeyword((char*)brute_force_attempt, keyword))
-            {
                 printf("Keyword '%s' found in the decrypted message.\n", keyword);
-            }
             else
-            {
                 printf("Keyword '%s' NOT found in the decrypted message.\n", keyword);
-            }
         }
         else
-        {
             printf("Decryption key not found.\n");
-        }
     }
 
     // Clean up
