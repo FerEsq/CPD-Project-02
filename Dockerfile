@@ -10,4 +10,5 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY ./src .
+COPY ./src/part_a .
+COPY ./src/part_b .
