@@ -1,12 +1,4 @@
-/**
- * This program encrypts and decrypts a message loaded from a file using DES and an arbitrary key, using MPI for parallel processing.
- * 
- * Programación Paralela y Distribuida
- * Andrés Montoya - 21552
- * Francisco Castillo - 21562
- * Fernanda Esquivel - 21542
- */
-
+#include <cstdint>
 #include <openssl/des.h>
 #include <string.h>
 #include <stdio.h>
@@ -22,10 +14,12 @@
  * @param key The key to use for decryption.
  * @param ciph The block to decrypt.
  */
-void decryptBlock(long key, unsigned char* ciph)
-{
+void decryptBlock(uint64_t key, unsigned char* ciph) {
     DES_cblock keyBlock;
     DES_key_schedule schedule;
+
+    // Make the key be 56 bits
+    key &= 0xFFFFFFFFFFFFFF;
 
     memcpy(&keyBlock, &key, sizeof(keyBlock));
     DES_set_odd_parity(&keyBlock);
@@ -42,10 +36,12 @@ void decryptBlock(long key, unsigned char* ciph)
  * @param key The key to use for encryption.
  * @param ciph The block to encrypt.
  */
-void encryptBlock(long key, unsigned char* ciph)
-{
+void encryptBlock(uint64_t key, unsigned char* ciph) {
     DES_cblock keyBlock;
     DES_key_schedule schedule;
+
+    // Make the key be 56 bits
+    key &= 0xFFFFFFFFFFFFFF;
 
     memcpy(&keyBlock, &key, sizeof(keyBlock));
     DES_set_odd_parity(&keyBlock);
@@ -90,7 +86,7 @@ int readFile(const char* filename, unsigned char** buffer)
  * @param ciph The message to encrypt.
  * @param len The length of the message.
  */
-void encryptMessage(long key, unsigned char* ciph, int len)
+void encryptMessage(uint64_t key, unsigned char* ciph, int len)
 {
     for (int i = 0; i < len; i += BLOCK_SIZE)
     {
@@ -104,7 +100,7 @@ void encryptMessage(long key, unsigned char* ciph, int len)
  * @param ciph The message to decrypt.
  * @param len The length of the message.
  */
-void decryptMessage(long key, unsigned char* ciph, int len)
+void decryptMessage(uint64_t key, unsigned char* ciph, int len)
 {
     for (int i = 0; i < len; i += BLOCK_SIZE)
     {
@@ -167,7 +163,7 @@ int main(int argc, char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); // Get process rank
 
     // Definimos la oración fija que se quiere buscar en el texto descifrado
-    const char* keyword = "Esta es una prueba de proyecto 2";
+    const char* keyword = "es una prueba de";
 
     if (argc != 3)
     {
@@ -181,7 +177,7 @@ int main(int argc, char* argv[])
     }
 
     // Parse the key from the argument for encryption
-    long original_key = atol(argv[1]);
+    uint64_t original_key = strtoull(argv[1], NULL, 10);
 
     // Read the content of the file only in rank 0
     unsigned char* plaintext = NULL;
@@ -225,7 +221,7 @@ int main(int argc, char* argv[])
 
     if (rank == 0)
     {
-        printf("Encrypted message:\n\t", rank);
+        printf("Encrypted message:\n\t");
         for (int i = 0; i < padded_len; ++i)
         {
             printf("%c", cipher[i]); // Print as raw characters for encryption
@@ -234,17 +230,21 @@ int main(int argc, char* argv[])
     }
 
     // Ahora realizaremos el ataque de fuerza bruta para encontrar la clave correcta.
-    long found_key = -1;
     unsigned char* brute_force_attempt = (unsigned char*)malloc(padded_len);
 
-    // Vamos a probar claves desde 0 hasta un límite arbitrario (puedes ajustar este valor)
+    // Vamos a probar claves desde 0 hasta un límite de 56 bits
+    long found_key = -1;
+    uint64_t current_key = 1;
+    const uint64_t upper_limit = (1ULL << 56); // Full keyspace for 56-bit DES
+
     start_time = clock();
-    for (long key_attempt = 0; key_attempt < 1000000; ++key_attempt)
+    while (found_key == -1 && current_key < upper_limit)
     {
-        memcpy(brute_force_attempt, cipher, padded_len); // Copiar el mensaje cifrado para cada intento
+        // Copiar el mensaje cifrado para cada intento
+        memcpy(brute_force_attempt, cipher, padded_len);
 
         // Intentar descifrar con la clave actual
-        decryptMessage(key_attempt, brute_force_attempt, padded_len);
+        decryptMessage(current_key, brute_force_attempt, padded_len);
 
         // Remover el padding para verificar si el mensaje fue descifrado correctamente
         int decrypted_len = padded_len;
@@ -252,19 +252,15 @@ int main(int argc, char* argv[])
 
         // Verificar si el texto descifrado contiene la palabra clave
         if (searchKeyword((char*)brute_force_attempt, keyword))
-        {
-            found_key = key_attempt;
-            break; // Detener el ciclo cuando encontremos la clave correcta
-        }
+            found_key = current_key;
+
+        current_key++;
     }
     end_time = clock();
     decrypt_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
     if (rank == 0)
     {
-        // Mostrar el mensaje desencriptado
-        printf("\n");
-        printf("Decrypted message:%.*d\n", rank, padded_len, brute_force_attempt);
-        printf("Decryption completed in %.6f seconds\n", decrypt_time);
+        printf("\nDecryption completed in %.6f seconds\n", decrypt_time);
 
         if (found_key != -1)
         {

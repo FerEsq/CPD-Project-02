@@ -34,5 +34,6 @@ mpirun --allow-run-as-root -np <num_procesos> ./out.o <clave> <nombre_archivo_tx
 
 #### Ejemplo:
 ```bash
+mpirun --allow-run-as-root -np 4 ./out.o 18014398509481983 message.txt
 mpirun --allow-run-as-root -np 4 ./out.o 42 message.txt
 ```
