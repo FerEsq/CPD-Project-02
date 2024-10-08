@@ -1,3 +1,12 @@
+/**
+ * This program encrypts and decrypts a message loaded from a file using DES and an arbitrary key, using MPI for parallel processing.
+ * 
+ * Programación Paralela y Distribuida
+ * Andrés Montoya - 21552
+ * Francisco Castillo - 21562
+ * Fernanda Esquivel - 21542
+ */
+
 #include <cstdint>
 #include <openssl/des.h>
 #include <string.h>
@@ -176,24 +185,23 @@ int main(int argc, char* argv[])
         if (searchKeyword((char*)brute_force_attempt, keyword))
         {
             found_key = current_key;
-            printf("\tProcess %d found key: %ld\n", rank, found_key);
             found_flag = 1;
+            printf("\tProcess %d found key: %ld\n", rank, found_key);
         }
 
-        MPI_Bcast(&found_flag, 1, MPI_INT, rank, MPI_COMM_WORLD);
+        // Broadcast the found flag and check for global termination
+        MPI_Allreduce(&found_flag, &global_found_flag, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 
-        if (found_flag)
+        if (global_found_flag)
         {
-            global_found_flag = 1;
-            break;
+            break;  // Exit the loop if any process found the key
         }
 
         current_key++;
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    MPI_Bcast(&found_key, 1, MPI_LONG, rank, MPI_COMM_WORLD);
+    // Broadcast the found key to all processes
+    MPI_Bcast(&found_key, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 
     end_time = clock();
     decrypt_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
@@ -206,12 +214,18 @@ int main(int argc, char* argv[])
         {
             printf("\tCorrect decryption key found: %ld\n", found_key);
 
+            // Desencriptar el mensaje con la clave encontrada
+            memcpy(brute_force_attempt, cipher, padded_len);
+            decryptMessage(found_key, brute_force_attempt, padded_len);
+            removePadding(brute_force_attempt, &padded_len);
+            
+            // Imprimir el mensaje desencriptado
+            printf("\nDecrypted message: %.*s\n", padded_len, brute_force_attempt);
+
             if (searchKeyword((char*)brute_force_attempt, keyword))
                 printf("Keyword '%s' found in the decrypted message.\n", keyword);
             else
-                printf("Keyword '%s' NOT found in the decrypted message.\n", keyword);
-
-            printf("\tCorrect decryption key found: %ld\n", found_key);
+                printf("Keyword '%s' NOT found in the decrypted message.\n");
         }
         else
         {
