@@ -32,7 +32,10 @@ void decrypt(long key, unsigned char* ciph, int len)
         return;
     }
 
-    DES_ecb_encrypt((DES_cblock*)ciph, (DES_cblock*)ciph, &schedule, DES_DECRYPT);
+    for (int i = 0; i < len; i += 8)
+    {
+        DES_ecb_encrypt((DES_cblock*)(ciph + i), (DES_cblock*)(ciph + i), &schedule, DES_DECRYPT);
+    }
 }
 
 /**
@@ -53,7 +56,10 @@ void encrypt(long key, unsigned char* ciph, int len)
         return;
     }
 
-    DES_ecb_encrypt((DES_cblock*)ciph, (DES_cblock*)ciph, &schedule, DES_ENCRYPT);
+    for (int i = 0; i < len; i += 8)
+    {
+        DES_ecb_encrypt((DES_cblock*)(ciph + i), (DES_cblock*)(ciph + i), &schedule, DES_ENCRYPT);
+    }
 }
 
 // The message to search for
@@ -93,9 +99,13 @@ int main(int argc, char* argv[])
     srand(time(NULL));
     key = rand() % upper;
 
+    printf("Key: %li\n", key);
+
     // Copy the message to the cipher
     memcpy(cipher, plaintext, sizeof(plaintext));
     encrypt(key, cipher, sizeof(plaintext));
+
+    printf("Encrypted: \"%s\"\n", cipher);
 
     // Try all keys from 0 to upper
     long found = -1;

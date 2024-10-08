@@ -21,7 +21,7 @@
  * @param len The length of the message
  * @return void
  */
-void decrypt(long key, unsigned char* ciph)
+void decrypt(long key, unsigned char* ciph, int len)
 {
     DES_cblock keyBlock;
     DES_key_schedule schedule;
@@ -33,7 +33,10 @@ void decrypt(long key, unsigned char* ciph)
         return;
     }
 
-    DES_ecb_encrypt((DES_cblock*)ciph, (DES_cblock*)ciph, &schedule, DES_DECRYPT);
+    for (int i = 0; i < len; i += 8)
+    {
+        DES_ecb_encrypt((DES_cblock*)(ciph + i), (DES_cblock*)(ciph + i), &schedule, DES_DECRYPT);
+    }
 }
 
 /**
@@ -43,7 +46,7 @@ void decrypt(long key, unsigned char* ciph)
  * @param len The length of the message
  * @return void
  */
-void encrypt(long key, unsigned char* ciph)
+void encrypt(long key, unsigned char* ciph, int len)
 {
     DES_cblock keyBlock;
     DES_key_schedule schedule;
@@ -55,7 +58,10 @@ void encrypt(long key, unsigned char* ciph)
         return;
     }
 
-    DES_ecb_encrypt((DES_cblock*)ciph, (DES_cblock*)ciph, &schedule, DES_ENCRYPT);
+    for (int i = 0; i < len; i += 8)
+    {
+        DES_ecb_encrypt((DES_cblock*)(ciph + i), (DES_cblock*)(ciph + i), &schedule, DES_ENCRYPT);
+    }
 }
 
 // The message to search for
@@ -72,7 +78,7 @@ int tryKey(long key, unsigned char* ciph, int len)
 {
     unsigned char temp[len + 1];
     memcpy(temp, ciph, len);
-    decrypt(key, temp);
+    decrypt(key, temp, len);
     temp[len] = '\0';
     return strstr((char*)temp, search) != NULL;
 }
@@ -111,7 +117,9 @@ int main(int argc, char* argv[])
 
         // Copy the message to the cipher
         memcpy(cipher, plaintext, sizeof(plaintext));
-        encrypt(key, cipher);
+        encrypt(key, cipher, sizeof(plaintext));
+
+        printf("Encrypted: \"%s\"\n", cipher);
     }
 
     // Broadcast the cypher to all nodes
@@ -155,7 +163,7 @@ int main(int argc, char* argv[])
     {
         MPI_Wait(&req, &st);
         // decrypt the message with the found key
-        decrypt(found, cipher);
+        decrypt(found, cipher, ciphlen);
         // Print the found key and the decrypted message
         printf("%li: \"%s\"\n", found, cipher);
     }
