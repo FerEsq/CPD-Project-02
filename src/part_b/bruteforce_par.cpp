@@ -101,7 +101,10 @@ int searchKeyword(const char* decrypted, const char* keyword)
 
 int main(int argc, char* argv[])
 {
+    MPI_Status st;
+    MPI_Request req;
     MPI_Init(&argc, &argv); // Initialize MPI environment
+    MPI_Comm comm = MPI_COMM_WORLD;
     int numprocs, rank;
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs); // Get number of processes
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); // Get process rank
@@ -174,6 +177,9 @@ int main(int argc, char* argv[])
     int global_found_flag = 0;
 
     start_time = clock();
+
+    MPI_Irecv(&found_key, 1, MPI_LONG, MPI_ANY_SOURCE, 0, comm, &req);
+
     while (!global_found_flag && current_key < end_key)
     {
         memcpy(brute_force_attempt, cipher, padded_len);
@@ -187,6 +193,15 @@ int main(int argc, char* argv[])
             found_key = current_key;
             found_flag = 1;
             printf("\tProcess %d found key: %ld\n", rank, found_key);
+
+            // Send the found key to all processes
+            for (int i = 0; i < numprocs; i++)
+            {
+                if (i != rank)
+                {
+                    MPI_Send(&found_key, 1, MPI_LONG, i, 0, comm);
+                }
+            }
         }
 
         // Broadcast the found flag and check for global termination
@@ -199,9 +214,6 @@ int main(int argc, char* argv[])
 
         current_key++;
     }
-
-    // Broadcast the found key to all processes
-    MPI_Bcast(&found_key, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 
     end_time = clock();
     decrypt_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
