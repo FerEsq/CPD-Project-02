@@ -101,7 +101,10 @@ int searchKeyword(const char* decrypted, const char* keyword)
 
 int main(int argc, char* argv[])
 {
+    MPI_Status st;
+    MPI_Request req;
     MPI_Init(&argc, &argv); // Initialize MPI environment
+    MPI_Comm comm = MPI_COMM_WORLD;
     int numprocs, rank;
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs); // Get number of processes
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); // Get process rank
@@ -154,13 +157,20 @@ int main(int argc, char* argv[])
 
     unsigned char* brute_force_attempt = (unsigned char*)malloc(padded_len);
 
-    uint64_t key_space_size = (1ULL << 56);  // 56 bits key space
-    uint64_t found_key = -1;
+    uint64_t key_space_size = (1ULL << 56);
+
+    printf("Process %d working with keys starting at %d and incrementing by %d\n", rank, rank, numprocs);
+
+    long found_key = -1;
     int found_flag = 0;
     int global_found_flag = 0;
 
     start_time = clock();
-    for (uint64_t current_key = rank; current_key < key_space_size; current_key += numprocs)
+
+    MPI_Irecv(&found_key, 1, MPI_LONG, MPI_ANY_SOURCE, 0, comm, &req);
+
+    uint64_t current_key = rank;
+    while (!global_found_flag && current_key < key_space_size)
     {
         memcpy(brute_force_attempt, cipher, padded_len);
         decryptMessage(current_key, brute_force_attempt, padded_len);
@@ -173,6 +183,15 @@ int main(int argc, char* argv[])
             found_key = current_key;
             found_flag = 1;
             printf("\tProcess %d found key: %ld\n", rank, found_key);
+
+            // Send the found key to all processes
+            for (int i = 0; i < numprocs; i++)
+            {
+                if (i != rank)
+                {
+                    MPI_Send(&found_key, 1, MPI_LONG, i, 0, comm);
+                }
+            }
         }
 
         // Broadcast the found flag and check for global termination
@@ -182,10 +201,10 @@ int main(int argc, char* argv[])
         {
             break;  // Exit the loop if any process found the key
         }
-    }
 
-    // Broadcast the found key to all processes
-    MPI_Bcast(&found_key, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+        // Increment the key by the number of processes to skip to the next non-sequential key
+        current_key += numprocs;
+    }
 
     end_time = clock();
     decrypt_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
@@ -202,7 +221,7 @@ int main(int argc, char* argv[])
             memcpy(brute_force_attempt, cipher, padded_len);
             decryptMessage(found_key, brute_force_attempt, padded_len);
             removePadding(brute_force_attempt, &padded_len);
-
+            
             // Imprimir el mensaje desencriptado
             printf("\nDecrypted message: %.*s\n", padded_len, brute_force_attempt);
 
