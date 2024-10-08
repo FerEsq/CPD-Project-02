@@ -26,6 +26,7 @@ mpirun --allow-run-as-root -np 4 ./out.o
 ### Paralelo
 ```bash
 mpic++ -o out.o bruteforce_par.cpp -lssl -lcrypto
+mpic++ -o out_bp2 bruteforce_par.cpp -lssl -lcrypto
 ```
 
 ```bash
@@ -36,4 +37,10 @@ mpirun --allow-run-as-root -np <num_procesos> ./out.o <clave> <nombre_archivo_tx
 ```bash
 mpirun --allow-run-as-root -np 4 ./out.o 18014398509481983 message.txt
 mpirun --allow-run-as-root -np 4 ./out.o 42 message.txt
+mpic++ -fopenmp -o out.o par_1.cpp -lssl -lcrypto
+mpirun --allow-run-as-root -np 4 ./out.o 42 message.txt
+mpirun --allow-run-as-root -np 4 ./out_bp 18014398509481984 message.txt
+mpirun --allow-run-as-root -np 4 ./out_bp2 18014398509481984 message.txt
+mpirun --allow-run-as-root -np 4 ./out_bp2 42 message.txt
+
 ```
